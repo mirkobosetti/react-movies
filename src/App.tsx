@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useDebounce } from 'react-use'
 import Search from './components/Search'
 import Spinner from './components/Spinner'
 import MovieCard from './components/MovieCard'
@@ -13,17 +14,31 @@ const API_OPTIONS = {
   }
 }
 
+type Movie = {
+  id: number
+  title: string
+  vote_average: number
+  poster_path: string | null
+  release_date: string
+  original_language: string
+}
+
 const App = () => {
   const [searchTerm, setSearchTerm] = useState('')
   const [errorMessage, setErrorMessage] = useState('')
-  const [movies, setMovies] = useState([])
+  const [movies, setMovies] = useState<Movie[]>([])
   const [isLoading, setIsLoading] = useState(false)
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('')
 
-  const fetchMovies = async () => {
+  useDebounce(() => setDebouncedSearchTerm(searchTerm), 500, [searchTerm])
+
+  const fetchMovies = async (query: string = '') => {
     setIsLoading(true)
     setErrorMessage('')
     try {
-      const endpoint = `${API_BASE_URL}/discover/movie?include_adult=true&include_video=false&language=en-US&page=1&sort_by=popularity.desc`
+      const endpoint = query
+        ? `${API_BASE_URL}/search/movie?query=${encodeURIComponent(query)}&language=en-US&page=1&include_adult=true`
+        : `${API_BASE_URL}/discover/movie?include_adult=true&include_video=false&language=en-US&page=1&sort_by=popularity.desc`
       const response = await fetch(endpoint, API_OPTIONS)
 
       if (!response.ok) {
@@ -48,8 +63,8 @@ const App = () => {
   }
 
   useEffect(() => {
-    fetchMovies()
-  }, [])
+    fetchMovies(debouncedSearchTerm)
+  }, [debouncedSearchTerm])
 
   return (
     <div>
